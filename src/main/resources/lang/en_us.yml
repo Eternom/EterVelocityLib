@@ -1,0 +1,21 @@
+# Texts shared by the Eter proxy plugins, MiniMessage format: https://docs.advntr.dev/minimessage/format
+# Palette tags (config.yml > colors): <primary> <accent> <info> <error> <success>
+# Used by every proxy plugin that does not redefine them. A missing key falls back to the built-in text.
+
+command:
+  players-only: "<error>This command can only be used by players."
+
+orchestrator:
+  usage: '<error>Usage: <accent>/<command> \<list|status|create|drain> [server]'
+  not-ready: "<error>The orchestrator is not ready (see the proxy console)."
+  creating: "<info>Server creation started (a few minutes, followed in the console)."
+  draining: "<info>Server <accent><server></accent> drained: deleted once empty."
+  unknown: "<error>Unknown active server: <accent><server>"
+  list-empty: "<info>No server managed by the orchestrator."
+  list-header: "<info>Managed servers: <accent><count>"
+  list-line: "<#8A8A8A> - <accent><server></accent> <info><state> · <players> player(s) · port <port> · <version>"
+  up-to-date: "<success>up to date"
+  outdated: "<error>to replace"
+  mode-dry-run: "dry run"
+  mode-real: "live"
+  status: "<info>Orchestrator <accent><family></accent> <accent><mode></accent> (ready: <ready>) · <minimum> to <maximum> servers of <capacity> players · version: <accent><version>"

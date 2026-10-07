@@ -1,0 +1,21 @@
+# ============================================================
+#  EterVelocityLib : réglages communs aux plugins Eter du proxy
+# ============================================================
+#
+#  Langue par défaut, préfixe et palette se règlent ICI une seule fois, pour EterVelocityLobby,
+#  EterVelocityResource... (comme EterLib/config.yml côté Paper, à garder identiques).
+#  Toute modification nécessite un redémarrage du proxy.
+
+# Langue utilisée si celle du joueur n'existe pas dans lang/.
+default-language: en_us
+
+# Préfixe des messages : le même que dans EterLib/config.yml (language.prefix).
+prefix: "<gradient:#FF7A00:#FFB347><bold>Core</bold></gradient> <dark_gray>» "
+
+# Palette des messages : la même que dans EterLib/config.yml (language.colors).
+colors:
+  primary: '#FF7A00'   # titres
+  accent: '#FFA640'    # mots importants
+  info: gray           # texte courant (gris clair)
+  error: '#FF5C5C'
+  success: '#5FD38D'

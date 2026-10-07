@@ -1,0 +1,21 @@
+# Textes communs aux plugins Eter du proxy, format MiniMessage : https://docs.advntr.dev/minimessage/format
+# Balises de la palette (config.yml > colors) : <primary> <accent> <info> <error> <success>
+# Repris par chaque plugin proxy qui ne les redéfinit pas. Une clé absente reprend le texte intégré.
+
+command:
+  players-only: "<error>Commande réservée aux joueurs."
+
+orchestrator:
+  usage: '<error>Utilisation : <accent>/<command> \<list|status|create|drain> [serveur]'
+  not-ready: "<error>L'orchestrateur n'est pas prêt (voir la console du proxy)."
+  creating: "<info>Création d'un serveur lancée (quelques minutes, suivie dans la console)."
+  draining: "<info>Serveur <accent><server></accent> vidé : supprimé une fois vide."
+  unknown: "<error>Serveur actif inconnu : <accent><server>"
+  list-empty: "<info>Aucun serveur géré par l'orchestrateur."
+  list-header: "<info>Serveurs gérés : <accent><count>"
+  list-line: "<#8A8A8A> - <accent><server></accent> <info><state> · <players> joueur(s) · port <port> · <version>"
+  up-to-date: "<success>à jour"
+  outdated: "<error>à remplacer"
+  mode-dry-run: "en essai"
+  mode-real: "réel"
+  status: "<info>Orchestrateur <accent><family></accent> <accent><mode></accent> (prêt : <ready>) · <minimum> à <maximum> serveurs de <capacity> joueurs · version : <accent><version>"
