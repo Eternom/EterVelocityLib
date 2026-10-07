@@ -25,7 +25,7 @@ import java.util.Locale;
  * réglés une seule fois (config.yml), langues avec textes communs, et le moteur des serveurs jetables (orchestrator).
  * Chargé au démarrage du proxy, avant les plugins qui en dépendent (@Dependency(id = "etervelocitylib")).
  */
-@Plugin(id = "etervelocitylib", name = "EterVelocityLib", version = "1.0.0", authors = {"NadTum"},
+@Plugin(id = "etervelocitylib", name = "EterVelocityLib", version = "1.1.0", authors = {"NadTum"},
         description = "Socle commun des plugins Eter du proxy")
 public final class EterVelocityLib {
 
@@ -36,10 +36,12 @@ public final class EterVelocityLib {
     private final TagResolver palette;
     private final Component prefix;
     private final Lang common;
+    private final Path dataDirectory;
 
     @Inject
     public EterVelocityLib(Logger logger, @DataDirectory Path dataDirectory) throws IOException {
         this.logger = logger;
+        this.dataDirectory = dataDirectory;
         // Tout est lu ici, au chargement : les plugins qui en dépendent sont chargés après et peuvent s'en servir
         Config config = new Config(EterVelocityLib.class, dataDirectory);
         this.defaultLocale = config.getString("default-language", "en_us");
@@ -63,6 +65,11 @@ public final class EterVelocityLib {
     /** Messages d'un plugin proxy : son dossier lang/, avec la langue par défaut, la palette, le préfixe et les textes communs. */
     public Messages messages(Class<?> owner, Path dataDirectory, Logger pluginLogger) throws IOException {
         return new Messages(new Lang(owner, dataDirectory, defaultLocale, pluginLogger, common), palette, prefix);
+    }
+
+    /** Dossier d'EterVelocityLib : la config d'EterLib commune aux serveurs créés (EterLib-config.yml). */
+    public Path dataDirectory() {
+        return dataDirectory;
     }
 
     public Logger logger() {

@@ -44,7 +44,8 @@ public class Lang {
                 }
             }
         }
-        logger.info("Langues : {} (défaut : {})", String.join(", ", languages.keySet()), this.defaultLocale);
+        if (!languages.isEmpty()) // un plugin sans textes à lui (que les communs) : rien à annoncer
+            logger.info("Langues : {} (défaut : {})", String.join(", ", languages.keySet()), this.defaultLocale);
     }
 
     /** Texte brut (MiniMessage) ; une liste YAML est rendue en lignes séparées par \n. null si absent partout. */

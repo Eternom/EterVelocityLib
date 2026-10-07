@@ -7,6 +7,7 @@ import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
 import com.velocitypowered.api.proxy.server.ServerInfo;
+import fr.eternom.eterVelocityLib.EterVelocityLib;
 import fr.eternom.eterVelocityLib.core.Config;
 import fr.eternom.eterVelocityLib.core.YamlFiles;
 import fr.eternom.eterVelocityLib.orchestrator.Pterodactyl.Allocation;
@@ -39,10 +40,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 /**
  * Une famille de serveurs jetables sur Pterodactyl (lobbys, mondes ressources...) : créés à partir du modèle
- * (template/template.zip ou .tar.gz + dernières releases des plugins + template/EterLib-config.yml), ajoutés à Velocity
+ * (modèle facultatif template/template.zip ou .tar.gz, sinon fichiers de base générés ; dernières releases des plugins ;
+ * config d'EterLib du modèle ou commune), ajoutés à Velocity
  * quand ils répondent, vidés puis supprimés quand ils ne servent plus.
  *
  * Règles (toutes les 30 s) : jamais moins de `minimum` serveurs à jour ; un de plus quand ils sont remplis à
@@ -88,6 +91,8 @@ public class ServerPool {
     private final boolean hasClientKey;
     private final Releases releases;
     private final Path template;
+    /** Lignes de server.properties en plus (orchestrator.server-properties), pour un serveur sans modèle. */
+    private final Map<String, String> serverProperties;
     private final ExecutorService worker;
     private final Map<String, Row> rows = new ConcurrentHashMap<>();
     private final Set<String> reachable = ConcurrentHashMap.newKeySet();
@@ -128,6 +133,11 @@ public class ServerPool {
         this.panel = new Pterodactyl(panelUrl, applicationKey, clientKey);
         this.releases = new Releases(config.getString("orchestrator.github-token", ""), dataDirectory.resolve("cache"));
         this.template = dataDirectory.resolve("template");
+        Map<String, String> properties = new java.util.LinkedHashMap<>();
+        for (String key : config.getKeys("orchestrator.server-properties")) {
+            properties.put(key, config.getString("orchestrator.server-properties." + key, ""));
+        }
+        this.serverProperties = Map.copyOf(properties);
         this.worker = Executors.newSingleThreadExecutor(runnable -> {
             Thread thread = new Thread(runnable, "Eter-orchestrateur-" + family);
             thread.setDaemon(true);
@@ -148,7 +158,9 @@ public class ServerPool {
                         String.valueOf(eterLib.getOrDefault("database.username", "root")),
                         String.valueOf(eterLib.getOrDefault("database.password", "")),
                         jar -> proxy.getPluginManager().addToClasspath(plugin, jar));
-                archive(); // modèle présent ?
+                if (archive().isEmpty()) {
+                    forwardingSecret(); // sans modèle, le secret Velocity est recopié : lisible ?
+                }
                 reconcile();
                 ready = true;
                 logger.info("Orchestrateur ({}) actif{} : {} à {} serveurs de {} joueurs", family, settings.dryRun()
@@ -373,11 +385,17 @@ public class ServerPool {
             TimeUnit.SECONDS.sleep(10);
         }
         String id = row.identifier();
-        Path archive = archive();
-        String archiveName = archive.getFileName().toString();
-        panel.upload(id, "/", List.of(archive));
-        panel.decompress(id, archiveName);
-        panel.deleteFile(id, archiveName);
+        Optional<Path> archive = archive();
+        if (archive.isPresent()) {
+            String archiveName = archive.get().getFileName().toString();
+            panel.upload(id, "/", List.of(archive.get()));
+            panel.decompress(id, archiveName);
+            panel.deleteFile(id, archiveName);
+        } else {
+            for (Map.Entry<String, String> file : baseFiles(row).entrySet()) {
+                panel.write(id, file.getKey(), file.getValue());
+            }
+        }
         List<Path> jars = new ArrayList<>();
         for (Release release : versionReleases) {
             jars.add(releases.jar(release));
@@ -559,7 +577,7 @@ public class ServerPool {
         if (settings.owner() <= 0) missing.add("orchestrator.panel.owner-user-id");
         if (settings.location() <= 0) missing.add("orchestrator.panel.location-id");
         if (settings.plugins().isEmpty()) missing.add("orchestrator.plugins");
-        if (!Files.exists(eterLibTemplate())) missing.add("template/EterLib-config.yml");
+        if (!Files.exists(eterLibTemplate())) missing.add("EterLib-config.yml (dans plugins/etervelocitylib/, ou template/ du plugin)");
         if (!missing.isEmpty()) {
             throw new IOException("à régler : " + String.join(", ", missing));
         }
@@ -576,8 +594,9 @@ public class ServerPool {
      */
     private void refreshVersion() {
         try {
-            Path zip = archive();
-            long modified = Files.getLastModifiedTime(zip).toMillis() + Files.getLastModifiedTime(eterLibTemplate()).toMillis();
+            Optional<Path> zip = archive();
+            long modified = (zip.isPresent() ? Files.getLastModifiedTime(zip.get()).toMillis() : 0)
+                    + Files.getLastModifiedTime(eterLibTemplate()).toMillis();
             if (version != null && modified == templateModified
                     && System.currentTimeMillis() - versionCheckedAt < VERSION_REFRESH.toMillis()) {
                 return;
@@ -586,7 +605,9 @@ public class ServerPool {
             for (Plugin source : settings.plugins()) {
                 latest.add(releases.latest(source));
             }
-            StringBuilder next = new StringBuilder(hash(zip, eterLibTemplate()));
+            StringBuilder next = new StringBuilder(zip.isPresent()
+                    ? hash("", zip.get(), eterLibTemplate())
+                    : hash(new java.util.TreeMap<>(serverProperties).toString(), eterLibTemplate()));
             latest.forEach(release -> next.append(' ').append(release.plugin().assetPrefix()).append('@').append(release.tag()));
             if (!next.toString().equals(version)) {
                 logger.info("Version ({}) : {}", family, next);
@@ -652,27 +673,77 @@ public class ServerPool {
         try {
             return YamlFiles.load(eterLibTemplate());
         } catch (RuntimeException invalidYaml) {
-            throw new IOException("template/EterLib-config.yml illisible (YAML invalide)");
+            throw new IOException("EterLib-config.yml illisible (YAML invalide)");
         }
     }
 
-    /** Le modèle : template.zip ou template.tar.gz (format des archives du panel) ; lobby.* accepté (ancien nom). */
-    private Path archive() throws IOException {
-        for (String name : List.of("template.zip", "template.tar.gz", "lobby.zip", "lobby.tar.gz")) {
-            Path archive = template.resolve(name);
-            if (Files.exists(archive)) {
-                return archive;
+    /** Le modèle, facultatif : template.zip ou template.tar.gz (format des archives du panel) ; lobby.* accepté (ancien nom). */
+    private Optional<Path> archive() {
+        return Stream.of("template.zip", "template.tar.gz", "lobby.zip", "lobby.tar.gz")
+                .map(template::resolve)
+                .filter(Files::exists)
+                .findFirst();
+    }
+
+    /**
+     * Config d'EterLib des serveurs créés : celle du modèle de la famille (template/EterLib-config.yml), sinon celle
+     * commune à toutes les familles, dans le dossier d'EterVelocityLib.
+     */
+    private Path eterLibTemplate() {
+        Path own = template.resolve("EterLib-config.yml");
+        return Files.exists(own) ? own : EterVelocityLib.get().dataDirectory().resolve("EterLib-config.yml");
+    }
+
+    /**
+     * Sans modèle : le strict nécessaire pour un serveur Paper derrière ce proxy. Le reste (monde, réglages) est
+     * généré par Paper au premier démarrage, avec ses valeurs par défaut.
+     */
+    private Map<String, String> baseFiles(Row row) throws IOException {
+        StringBuilder properties = new StringBuilder("# Généré par l'orchestrateur Eter (" + family + ")\n")
+                .append("online-mode=false\n") // l'authentification est faite par le proxy
+                .append("enforce-secure-profile=false\n")
+                .append("server-port=").append(row.port()).append('\n')
+                .append("max-players=").append(settings.capacity()).append('\n')
+                .append("spawn-protection=0\n");
+        new java.util.TreeMap<>(serverProperties).forEach((key, value) -> properties.append(key).append('=').append(value).append('\n'));
+        String secret = forwardingSecret().replace("'", "''");
+        return Map.of(
+                "/eula.txt", "eula=true\n",
+                "/server.properties", properties.toString(),
+                "/config/paper-global.yml", "proxies:\n  velocity:\n    enabled: true\n    online-mode: true\n    secret: '" + secret + "'\n");
+    }
+
+    /**
+     * Secret de transfert de Velocity (modern forwarding), à recopier dans chaque serveur créé sans modèle :
+     * VELOCITY_FORWARDING_SECRET, sinon le fichier forwarding-secret-file de velocity.toml. Jamais écrit dans la console.
+     */
+    private static String forwardingSecret() throws IOException {
+        String fromEnvironment = System.getenv("VELOCITY_FORWARDING_SECRET");
+        if (fromEnvironment != null && !fromEnvironment.isBlank()) {
+            return fromEnvironment.trim();
+        }
+        String file = "forwarding.secret";
+        Path velocityToml = Path.of("velocity.toml");
+        if (Files.exists(velocityToml)) {
+            for (String line : Files.readAllLines(velocityToml, StandardCharsets.UTF_8)) {
+                String trimmed = line.trim();
+                if (trimmed.startsWith("forwarding-secret-file") && trimmed.contains("\"")) {
+                    file = trimmed.substring(trimmed.indexOf('"') + 1, trimmed.lastIndexOf('"'));
+                }
             }
         }
-        throw new IOException("modèle absent : template/template.zip ou template/template.tar.gz");
+        Path secret = Path.of(file);
+        if (!Files.exists(secret) || Files.readString(secret, StandardCharsets.UTF_8).isBlank()) {
+            throw new IOException("secret Velocity introuvable (" + file + ") : nécessaire pour un serveur sans modèle");
+        }
+        return Files.readString(secret, StandardCharsets.UTF_8).trim();
     }
 
-    private Path eterLibTemplate() {
-        return template.resolve("EterLib-config.yml");
-    }
 
-    private static String hash(Path... files) throws IOException, NoSuchAlgorithmException {
+    /** extra : réglages qui changent les fichiers générés (vide avec un modèle : même empreinte qu'avant). */
+    private static String hash(String extra, Path... files) throws IOException, NoSuchAlgorithmException {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        digest.update(extra.getBytes(StandardCharsets.UTF_8));
         byte[] buffer = new byte[65536];
         for (Path file : files) {
             try (InputStream in = Files.newInputStream(file)) {
