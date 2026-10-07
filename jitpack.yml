@@ -7,6 +7,9 @@
 jdk:
   - openjdk21
 before_install:
+  # Repart de zéro : un Gradle mal décompressé laissé dans /tmp par un build précédent fait échouer le suivant
+  # (ClassNotFoundException: org.gradle.instrumentation.agent.Agent, builds 1.1.0 et 1.1.1)
+  - rm -rf /tmp/gradle-9.7.1 /tmp/gradle.zip
   - curl -fsSL -o /tmp/gradle.zip https://services.gradle.org/distributions/gradle-9.7.1-bin.zip
   - unzip -q -o /tmp/gradle.zip -d /tmp
 install:
