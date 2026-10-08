@@ -24,7 +24,8 @@ développeur, à tenir à jour avec le code. Utilisé par **EterVelocityLobby**,
   `eula.txt`, `server.properties` (`online-mode=false`, port, `max-players` = `capacity`, + `orchestrator.server-properties`)
   et `config/paper-global.yml` (secret Velocity lu dans `forwarding-secret-file` de `velocity.toml`, ou
   `VELOCITY_FORWARDING_SECRET`) ; Paper génère le reste. Config d'EterLib (`%server%`, `%display%`) :
-  `template/EterLib-config.yml` du plugin, sinon celle commune dans le dossier d'EterVelocityLib.
+  **la seule du proxy**, `plugins/etervelocitylib/EterLib-config.yml` (un `template/EterLib-config.yml` est ignoré, avec
+  un avertissement).
   Les plugins sont la **dernière release GitHub** de chacun (`orchestrator.plugins`), Eter ou tiers (ex :
   `MilkBowl/Vault`, jar sans version `Vault.jar`) ; jars gardés dans
   `cache/<dépôt>/<tag>/` ; le jeton GitHub ne part qu'à l'API, jamais au téléchargement des jars.
@@ -47,7 +48,7 @@ développeur, à tenir à jour avec le code. Utilisé par **EterVelocityLobby**,
   - `dry-run` (par défaut) : écrit ce qu'il ferait, sans rien faire ;
   - panel en `https://` obligatoire ; clés et mots de passe jamais écrits dans la console (erreurs YAML sans la ligne
     fautive, pas de trace complète).
-- **Base** : accès lus dans `EterLib-config.yml` ; pilote MariaDB téléchargé au premier démarrage dans `libs/` et
+- **Base** : celle d'EterVelocityLib (`database()`, même fichier) ; pilote MariaDB téléchargé au premier démarrage dans `libs/` et
   ajouté au proxy (`addToClasspath`) : rien d'embarqué. À la suppression, les lignes du serveur dans les tables
   « traces » du plugin (ex : `eter_servers`, `eterhub_lobbies`) sont retirées aussi.
 

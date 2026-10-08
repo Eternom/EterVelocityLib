@@ -9,8 +9,6 @@ import com.velocitypowered.api.proxy.server.RegisteredServer;
 import com.velocitypowered.api.proxy.server.ServerInfo;
 import fr.eternom.eterVelocityLib.EterVelocityLib;
 import fr.eternom.eterVelocityLib.core.Config;
-import fr.eternom.eterVelocityLib.core.Sql;
-import fr.eternom.eterVelocityLib.core.YamlFiles;
 import fr.eternom.eterVelocityLib.orchestrator.Pterodactyl.Allocation;
 import fr.eternom.eterVelocityLib.orchestrator.Pterodactyl.Server;
 import fr.eternom.eterVelocityLib.orchestrator.Releases.Plugin;
@@ -147,12 +145,15 @@ public class ServerPool {
     }
 
     /** Démarrage : base, puis remise en ordre (serveurs déjà là, créations interrompues), puis les règles toutes les 30 s. */
-    public void start(Path libs) {
+    public void start() {
+        if (Files.exists(template.resolve("EterLib-config.yml"))) {
+            logger.warn("template/EterLib-config.yml ({}) n'est plus lu : seul plugins/etervelocitylib/EterLib-config.yml compte, supprime-le",
+                    family);
+        }
         worker.execute(() -> {
             try {
                 checkSettings();
-                store = new ServerStore(family + "_servers", traces,
-                        Sql.open(readEterLibTemplate(), libs, jar -> proxy.getPluginManager().addToClasspath(plugin, jar)));
+                store = new ServerStore(family + "_servers", traces, EterVelocityLib.get().database());
                 if (archive().isEmpty()) {
                     forwardingSecret(); // sans modèle, le secret Velocity est recopié : lisible ?
                 }
@@ -572,7 +573,7 @@ public class ServerPool {
         if (settings.owner() <= 0) missing.add("orchestrator.panel.owner-user-id");
         if (settings.location() <= 0) missing.add("orchestrator.panel.location-id");
         if (settings.plugins().isEmpty()) missing.add("orchestrator.plugins");
-        if (!Files.exists(eterLibTemplate())) missing.add("EterLib-config.yml (dans plugins/etervelocitylib/, ou template/ du plugin)");
+        if (!Files.exists(eterLibTemplate())) missing.add("EterLib-config.yml (dans plugins/etervelocitylib/)");
         if (!missing.isEmpty()) {
             throw new IOException("à régler : " + String.join(", ", missing));
         }
@@ -660,18 +661,6 @@ public class ServerPool {
         }
     }
 
-    /**
-     * Le modèle de config d'EterLib (accès à la base). Une erreur YAML recopie la ligne fautive : jamais transmise,
-     * pour qu'un mot de passe ne finisse pas dans la console.
-     */
-    private Map<String, Object> readEterLibTemplate() throws IOException {
-        try {
-            return YamlFiles.load(eterLibTemplate());
-        } catch (RuntimeException invalidYaml) {
-            throw new IOException("EterLib-config.yml illisible (YAML invalide)");
-        }
-    }
-
     /** Le modèle, facultatif : template.zip ou template.tar.gz (format des archives du panel) ; lobby.* accepté (ancien nom). */
     private Optional<Path> archive() {
         return Stream.of("template.zip", "template.tar.gz", "lobby.zip", "lobby.tar.gz")
@@ -680,13 +669,9 @@ public class ServerPool {
                 .findFirst();
     }
 
-    /**
-     * Config d'EterLib des serveurs créés : celle du modèle de la famille (template/EterLib-config.yml), sinon celle
-     * commune à toutes les familles, dans le dossier d'EterVelocityLib.
-     */
+    /** Config d'EterLib des serveurs créés : la seule du proxy, dans le dossier d'EterVelocityLib. */
     private Path eterLibTemplate() {
-        Path own = template.resolve("EterLib-config.yml");
-        return Files.exists(own) ? own : EterVelocityLib.get().dataDirectory().resolve("EterLib-config.yml");
+        return EterVelocityLib.get().eterLibConfig();
     }
 
     /**

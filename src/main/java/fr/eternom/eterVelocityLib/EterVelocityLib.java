@@ -30,7 +30,7 @@ import java.util.Map;
  * réglés une seule fois (config.yml), langues avec textes communs, et le moteur des serveurs jetables (orchestrator).
  * Chargé au démarrage du proxy, avant les plugins qui en dépendent (@Dependency(id = "etervelocitylib")).
  */
-@Plugin(id = "etervelocitylib", name = "EterVelocityLib", version = "1.2.1", authors = {"NadTum"},
+@Plugin(id = "etervelocitylib", name = "EterVelocityLib", version = "1.3.0", authors = {"NadTum"},
         description = "Socle commun des plugins Eter du proxy")
 public final class EterVelocityLib {
 
@@ -81,7 +81,7 @@ public final class EterVelocityLib {
      */
     public synchronized Sql database() throws IOException {
         if (database == null) {
-            Path config = dataDirectory.resolve("EterLib-config.yml");
+            Path config = eterLibConfig();
             if (!Files.exists(config)) {
                 throw new IOException("EterLib-config.yml absent de plugins/etervelocitylib/ : la base est inaccessible");
             }
@@ -97,7 +97,14 @@ public final class EterVelocityLib {
         return database;
     }
 
-    /** Dossier d'EterVelocityLib : la config d'EterLib commune aux serveurs créés (EterLib-config.yml). */
+    /**
+     * LA config d'EterLib du réseau, la seule du proxy : accès à la base pour tous les plugins du proxy, et config
+     * écrite sur chaque serveur créé par l'orchestrateur (%server% et %display% remplacés).
+     */
+    public Path eterLibConfig() {
+        return dataDirectory.resolve("EterLib-config.yml");
+    }
+
     public Path dataDirectory() {
         return dataDirectory;
     }
