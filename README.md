@@ -21,8 +21,10 @@ développeur, à tenir à jour avec le code. Utilisé par **EterVelocityLobby** 
   `eula.txt`, `server.properties` (`online-mode=false`, port, `max-players` = `capacity`, + `orchestrator.server-properties`)
   et `config/paper-global.yml` (secret Velocity lu dans `forwarding-secret-file` de `velocity.toml`, ou
   `VELOCITY_FORWARDING_SECRET`) ; Paper génère le reste. Config d'EterLib (`%server%`, `%display%`) :
-  `template/EterLib-config.yml` du plugin, sinon celle commune dans le dossier d'EterVelocityLib. Les plugins Eter sont la **dernière release GitHub** de chacun (`orchestrator.plugins`,
-  jars gardés dans `cache/` ; le jeton GitHub ne part qu'à l'API, jamais au téléchargement des jars).
+  `template/EterLib-config.yml` du plugin, sinon celle commune dans le dossier d'EterVelocityLib.
+  Les plugins sont la **dernière release GitHub** de chacun (`orchestrator.plugins`), Eter ou tiers (ex :
+  `MilkBowl/Vault`, jar sans version `Vault.jar`) ; jars gardés dans
+  `cache/<dépôt>/<tag>/` ; le jeton GitHub ne part qu'à l'API, jamais au téléchargement des jars.
 - **Création** : ligne `CREATING` en base **avant** le panel (une création interrompue reste retrouvable) → serveur
   créé par **déploiement automatique** (`location-id`, `port-range` facultatif ; œuf, propriétaire dédié, identifiant
   externe `<famille>:<nom>`) → attente de l'installation → envoi de l'archive, décompression → jars dans `plugins/` →

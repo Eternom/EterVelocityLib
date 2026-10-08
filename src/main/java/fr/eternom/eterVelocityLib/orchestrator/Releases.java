@@ -57,21 +57,26 @@ final class Releases {
         for (JsonElement element : release.getAsJsonArray("assets")) {
             JsonObject asset = element.getAsJsonObject();
             String name = asset.get("name").getAsString();
-            if (name.startsWith(plugin.assetPrefix() + "-") && name.endsWith(".jar")) {
+            // « EterTab-Paper-1.1.11.jar », ou un jar sans version comme « Vault.jar » (MilkBowl/Vault)
+            if (name.endsWith(".jar") && (name.startsWith(plugin.assetPrefix() + "-") || name.equals(plugin.assetPrefix() + ".jar"))) {
                 return new Release(plugin, tag, name, asset.get("browser_download_url").getAsString());
             }
         }
-        throw new IOException("GitHub : pas de jar " + plugin.assetPrefix() + "-*.jar dans la release " + tag + " de " + plugin.repo());
+        throw new IOException("GitHub : pas de jar " + plugin.assetPrefix() + "-*.jar ni " + plugin.assetPrefix() + ".jar dans la release " + tag + " de " + plugin.repo());
     }
 
-    /** Le jar de cette release, téléchargé si besoin. */
+    /**
+     * Le jar de cette release, téléchargé si besoin. Rangé par dépôt et par tag (cache/MilkBowl_Vault/1.7.3/Vault.jar) :
+     * un jar sans version dans son nom n'est jamais confondu avec celui d'une autre release.
+     */
     Path jar(Release release) throws IOException {
-        Path file = cache.resolve(release.assetName());
+        Path folder = cache.resolve(release.plugin().repo().replace('/', '_')).resolve(release.tag());
+        Path file = folder.resolve(release.assetName());
         if (Files.exists(file)) {
             return file;
         }
-        Files.createDirectories(cache);
-        Path temporary = cache.resolve(release.assetName() + ".part");
+        Files.createDirectories(folder);
+        Path temporary = folder.resolve(release.assetName() + ".part");
         HttpResponse<Path> response = send(request(release.downloadUrl(), false).header("Accept", "application/octet-stream").build(),
                 HttpResponse.BodyHandlers.ofFile(temporary));
         if (response.statusCode() != 200) {
