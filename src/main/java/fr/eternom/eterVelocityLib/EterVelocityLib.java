@@ -3,8 +3,11 @@ package fr.eternom.eterVelocityLib;
 import com.google.inject.Inject;
 import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
+import com.velocitypowered.api.proxy.ProxyServer;
 import fr.eternom.eterVelocityLib.core.Config;
 import fr.eternom.eterVelocityLib.core.Lang;
+import fr.eternom.eterVelocityLib.core.Sql;
+import fr.eternom.eterVelocityLib.core.YamlFiles;
 import fr.eternom.eterVelocityLib.helper.Messages;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -15,17 +18,19 @@ import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.slf4j.Logger;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 /**
  * Socle commun des plugins Eter du PROXY (Velocity), comme EterLib côté Paper : langue par défaut, palette et préfixe
  * réglés une seule fois (config.yml), langues avec textes communs, et le moteur des serveurs jetables (orchestrator).
  * Chargé au démarrage du proxy, avant les plugins qui en dépendent (@Dependency(id = "etervelocitylib")).
  */
-@Plugin(id = "etervelocitylib", name = "EterVelocityLib", version = "1.1.4", authors = {"NadTum"},
+@Plugin(id = "etervelocitylib", name = "EterVelocityLib", version = "1.2.0", authors = {"NadTum"},
         description = "Socle commun des plugins Eter du proxy")
 public final class EterVelocityLib {
 
@@ -37,9 +42,12 @@ public final class EterVelocityLib {
     private final Component prefix;
     private final Lang common;
     private final Path dataDirectory;
+    private final ProxyServer proxy;
+    private Sql database;
 
     @Inject
-    public EterVelocityLib(Logger logger, @DataDirectory Path dataDirectory) throws IOException {
+    public EterVelocityLib(ProxyServer proxy, Logger logger, @DataDirectory Path dataDirectory) throws IOException {
+        this.proxy = proxy;
         this.logger = logger;
         this.dataDirectory = dataDirectory;
         // Tout est lu ici, au chargement : les plugins qui en dépendent sont chargés après et peuvent s'en servir
@@ -65,6 +73,28 @@ public final class EterVelocityLib {
     /** Messages d'un plugin proxy : son dossier lang/, avec la langue par défaut, la palette, le préfixe et les textes communs. */
     public Messages messages(Class<?> owner, Path dataDirectory, Logger pluginLogger) throws IOException {
         return new Messages(new Lang(owner, dataDirectory, defaultLocale, pluginLogger, common), palette, prefix);
+    }
+
+    /**
+     * La base du réseau (accès lus dans EterLib-config.yml de ce dossier : le même que pour les serveurs créés par
+     * l'orchestrateur), ouverte au premier appel. Bloquant : depuis une tâche de fond.
+     */
+    public synchronized Sql database() throws IOException {
+        if (database == null) {
+            Path config = dataDirectory.resolve("EterLib-config.yml");
+            if (!Files.exists(config)) {
+                throw new IOException("EterLib-config.yml absent de plugins/etervelocitylib/ : la base est inaccessible");
+            }
+            Map<String, Object> eterLib;
+            try {
+                eterLib = YamlFiles.load(config);
+            } catch (RuntimeException invalidYaml) {
+                // Sans le détail : il recopierait la ligne fautive, qui peut être un mot de passe
+                throw new IOException("EterLib-config.yml illisible (YAML invalide)");
+            }
+            database = Sql.open(eterLib, dataDirectory.resolve("libs"), jar -> proxy.getPluginManager().addToClasspath(this, jar));
+        }
+        return database;
     }
 
     /** Dossier d'EterVelocityLib : la config d'EterLib commune aux serveurs créés (EterLib-config.yml). */

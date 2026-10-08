@@ -9,6 +9,7 @@ import com.velocitypowered.api.proxy.server.RegisteredServer;
 import com.velocitypowered.api.proxy.server.ServerInfo;
 import fr.eternom.eterVelocityLib.EterVelocityLib;
 import fr.eternom.eterVelocityLib.core.Config;
+import fr.eternom.eterVelocityLib.core.Sql;
 import fr.eternom.eterVelocityLib.core.YamlFiles;
 import fr.eternom.eterVelocityLib.orchestrator.Pterodactyl.Allocation;
 import fr.eternom.eterVelocityLib.orchestrator.Pterodactyl.Server;
@@ -150,14 +151,8 @@ public class ServerPool {
         worker.execute(() -> {
             try {
                 checkSettings();
-                Map<String, Object> eterLib = readEterLibTemplate();
-                store = new ServerStore(family + "_servers", traces, libs,
-                        String.valueOf(eterLib.getOrDefault("database.host", "localhost")),
-                        Integer.parseInt(String.valueOf(eterLib.getOrDefault("database.port", 3306))),
-                        String.valueOf(eterLib.getOrDefault("database.name", "eternom")),
-                        String.valueOf(eterLib.getOrDefault("database.username", "root")),
-                        String.valueOf(eterLib.getOrDefault("database.password", "")),
-                        jar -> proxy.getPluginManager().addToClasspath(plugin, jar));
+                store = new ServerStore(family + "_servers", traces,
+                        Sql.open(readEterLibTemplate(), libs, jar -> proxy.getPluginManager().addToClasspath(plugin, jar)));
                 if (archive().isEmpty()) {
                     forwardingSecret(); // sans modèle, le secret Velocity est recopié : lisible ?
                 }

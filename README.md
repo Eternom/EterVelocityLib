@@ -1,13 +1,16 @@
 # EterVelocityLib
 
 Le socle commun des plugins Eter du **proxy Velocity** (4.2+, Java 25), comme EterLib côté Paper. Document
-développeur, à tenir à jour avec le code. Utilisé par **EterVelocityLobby** et **EterVelocityResource**.
+développeur, à tenir à jour avec le code. Utilisé par **EterVelocityLobby**, **EterVelocityResource** et **EterVelocityModeration**.
 
 ## Contenu
 
 - **`core`** : `Config` (config.yml d'un plugin, copiée du jar au premier démarrage), `Lang` (lang/<locale>.yml du
   plugin, repli sur les textes communs d'EterVelocityLib puis sur la langue par défaut), `YamlFiles` (SnakeYAML
-  fourni par Velocity).
+  fourni par Velocity). `Sql` : la base MariaDB/MySQL (pilote MariaDB téléchargé dans `libs/` et ajouté au classpath du
+  plugin), `query` / `execute` avec paramètres, bloquant (tâche de fond). La base du réseau :
+  `EterVelocityLib.get().database()`, ouverte au premier appel avec les accès de `plugins/etervelocitylib/EterLib-config.yml`
+  (le même fichier que pour les serveurs créés) ; l'orchestrateur ouvre la sienne avec la config de sa famille.
 - **`helper/Messages`** : MiniMessage avec la palette et le préfixe communs, réglés UNE fois dans le `config.yml`
   d'EterVelocityLib (à garder identiques à `EterLib/config.yml`). Obtenu par
   `EterVelocityLib.get().messages(MonPlugin.class, dataDirectory, logger)`.

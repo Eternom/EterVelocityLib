@@ -1,26 +1,19 @@
 package fr.eternom.eterVelocityLib.orchestrator;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
+import fr.eternom.eterVelocityLib.core.Sql;
+
 import java.sql.Connection;
-import java.sql.Driver;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties;
-import java.util.function.Consumer;
 
 /**
  * La table <famille>_servers, SEULE source de vérité des serveurs créés par l'orchestrateur de cette famille : un serveur du panel qui n'y
  * figure pas n'est jamais supprimé (le panel héberge aussi les serveurs des clients). Même base que le réseau (accès lus
- * dans le modèle de config d'EterLib). Pilote MariaDB téléchargé au premier démarrage (libs/), pas inclus dans le jar :
- * Velocity n'a pas le chargement de bibliothèques de Paper. Une connexion par opération : peu d'appels, pas de pool.
+ * dans le modèle de config d'EterLib). Une connexion par opération (Sql) :
+ * peu d'appels, pas de pool.
  */
 final class ServerStore {
 
@@ -40,24 +33,17 @@ final class ServerStore {
         }
     }
 
-    private static final String DRIVER_VERSION = "3.5.6";
     /** Table des serveurs de CETTE famille (eterlobby_servers, eterresource_servers...). */
     private final String table;
     /** Tables où un serveur supprimé laisse une trace par son nom (eter_servers, eterhub_lobbies...). */
     private final List<String> traces;
 
-    private final Driver driver;
-    private final String jdbcUrl;
-    private final Properties credentials = new Properties();
+    private final Sql sql;
 
-    ServerStore(String table, List<String> traces, Path libs, String host, int port, String database, String username, String password,
-               Consumer<Path> addToClasspath) throws IOException, SQLException {
+    ServerStore(String table, List<String> traces, Sql sql) throws SQLException {
         this.table = table;
         this.traces = List.copyOf(traces);
-        this.driver = loadDriver(libs, addToClasspath);
-        this.jdbcUrl = "jdbc:mariadb://" + host + ":" + port + "/" + database;
-        credentials.setProperty("user", username);
-        credentials.setProperty("password", password);
+        this.sql = sql;
         try (Connection connection = connect(); PreparedStatement create = connection.prepareStatement(
                 "CREATE TABLE IF NOT EXISTS " + table + " (name VARCHAR(32) PRIMARY KEY, panel_id INT NULL,"
                         + " identifier VARCHAR(16) NULL, external_id VARCHAR(64) NOT NULL, version VARCHAR(1024) NOT NULL,"
@@ -112,28 +98,6 @@ final class ServerStore {
     }
 
     private Connection connect() throws SQLException {
-        return driver.connect(jdbcUrl, credentials);
-    }
-
-    /** libs/mariadb-java-client-<version>.jar, téléchargé depuis Maven Central s'il manque, puis ajouté au proxy. */
-    private static Driver loadDriver(Path libs, Consumer<Path> addToClasspath) throws IOException {
-        Path jar = libs.resolve("mariadb-java-client-" + DRIVER_VERSION + ".jar");
-        if (!Files.exists(jar)) {
-            Files.createDirectories(libs);
-            URI source = URI.create("https://repo1.maven.org/maven2/org/mariadb/jdbc/mariadb-java-client/" + DRIVER_VERSION
-                    + "/mariadb-java-client-" + DRIVER_VERSION + ".jar");
-            Path temporary = libs.resolve(jar.getFileName() + ".part");
-            try (InputStream in = source.toURL().openStream()) {
-                Files.copy(in, temporary, StandardCopyOption.REPLACE_EXISTING);
-            }
-            Files.move(temporary, jar, StandardCopyOption.REPLACE_EXISTING);
-        }
-        addToClasspath.accept(jar);
-        try {
-            return (Driver) Class.forName("org.mariadb.jdbc.Driver", true, ServerStore.class.getClassLoader())
-                    .getDeclaredConstructor().newInstance();
-        } catch (ReflectiveOperationException e) {
-            throw new IOException("Pilote MariaDB illisible : " + jar, e);
-        }
+        return sql.connect();
     }
 }
