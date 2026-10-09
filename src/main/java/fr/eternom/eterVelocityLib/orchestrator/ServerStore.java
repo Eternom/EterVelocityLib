@@ -36,13 +36,11 @@ final class ServerStore {
     /** Table des serveurs de CETTE famille (eterlobby_servers, eterresource_servers...). */
     private final String table;
     /** Tables où un serveur supprimé laisse une trace par son nom (eter_servers, eterhub_lobbies...). */
-    private final List<String> traces;
 
     private final Sql sql;
 
-    ServerStore(String table, List<String> traces, Sql sql) throws SQLException {
+    ServerStore(String table, Sql sql) throws SQLException {
         this.table = table;
-        this.traces = List.copyOf(traces);
         this.sql = sql;
         try (Connection connection = connect(); PreparedStatement create = connection.prepareStatement(
                 "CREATE TABLE IF NOT EXISTS " + table + " (name VARCHAR(32) PRIMARY KEY, panel_id INT NULL,"
@@ -74,18 +72,11 @@ final class ServerStore {
     }
 
     /**
-     * Serveur supprimé : sa ligne, et ses traces dans les tables des plugins (traces), pour qu'il ne reste pas
-     * « hors ligne » dans les menus. Une table absente est ignorée.
+     * Serveur supprimé : sa ligne seulement. Les plugins nettoient eux-mêmes leurs tables (EterLib oublie un serveur
+     * muet depuis un jour, EterHub et EterResource leurs lignes trop vieilles) : chaque plugin est seul maître des siennes.
      */
     void delete(String name) throws SQLException {
         execute("DELETE FROM " + table + " WHERE name = ?", name);
-        for (String trace : traces) {
-            try {
-                execute("DELETE FROM " + trace + " WHERE name = ?", name);
-            } catch (SQLException missingTable) {
-                // plugin pas encore installé sur le réseau
-            }
-        }
     }
 
     private void execute(String sql, Object... values) throws SQLException {

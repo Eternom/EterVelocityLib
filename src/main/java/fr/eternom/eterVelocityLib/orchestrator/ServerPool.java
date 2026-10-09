@@ -81,7 +81,6 @@ public class ServerPool {
     private final Logger logger;
     private final String family;
     private final String externalPrefix;
-    private final List<String> traces;
     private final Function<String, Optional<RegisteredServer>> fallback;
     private final Settings settings;
     private final Pterodactyl panel;
@@ -109,18 +108,16 @@ public class ServerPool {
 
     /**
      * @param family   nom de la famille : préfixe de la table (family_servers) et de l'identifiant externe (family:nom)
-     * @param traces   tables où un serveur supprimé laisse une ligne à son nom (ex : eter_servers, eterhub_lobbies)
      * @param fallback où envoyer un joueur d'un serveur qu'on supprime (ex : un autre lobby) ; vide = un autre serveur
      *                 de la famille
      */
     public ServerPool(Object plugin, ProxyServer proxy, Logger logger, Config config, Path dataDirectory, String family,
-                      List<String> traces, Function<String, Optional<RegisteredServer>> fallback) {
+                      Function<String, Optional<RegisteredServer>> fallback) {
         this.plugin = plugin;
         this.proxy = proxy;
         this.logger = logger;
         this.family = family;
         this.externalPrefix = family + ":";
-        this.traces = List.copyOf(traces);
         this.fallback = fallback;
         this.settings = settings(config);
         this.panelUrl = config.getString("orchestrator.panel.url", "").trim();
@@ -153,7 +150,7 @@ public class ServerPool {
         worker.execute(() -> {
             try {
                 checkSettings();
-                store = new ServerStore(family + "_servers", traces, EterVelocityLib.get().database());
+                store = new ServerStore(family + "_servers", EterVelocityLib.get().database());
                 if (archive().isEmpty()) {
                     forwardingSecret(); // sans modèle, le secret Velocity est recopié : lisible ?
                 }

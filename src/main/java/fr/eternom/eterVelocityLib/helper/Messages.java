@@ -7,6 +7,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
 import java.util.Locale;
 
@@ -17,6 +18,12 @@ import java.util.Locale;
 public class Messages {
 
     private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
+    /** Codes § avec les couleurs exactes (hex) que le client accepte dans le MOTD. */
+    private static final LegacyComponentSerializer LEGACY = LegacyComponentSerializer.builder()
+            .character(LegacyComponentSerializer.SECTION_CHAR)
+            .hexColors()
+            .useUnusualXRepeatedCharacterHexFormat()
+            .build();
 
     private final Lang lang;
     private final TagResolver palette;
@@ -47,5 +54,13 @@ public class Messages {
     /** Texte MiniMessage mis en forme avec la palette. */
     public Component render(String raw, TagResolver tags) {
         return MINI_MESSAGE.deserialize(raw, palette, tags);
+    }
+
+    /**
+     * Version « codes § » d'un texte : pour les endroits où Minecraft n'accepte qu'un texte simple (lignes au survol
+     * du nombre de joueurs, texte de version du MOTD).
+     */
+    public String legacy(String raw, TagResolver tags) {
+        return LEGACY.serialize(render(raw, tags));
     }
 }

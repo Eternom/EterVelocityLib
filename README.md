@@ -1,7 +1,7 @@
 # EterVelocityLib
 
 Le socle commun des plugins Eter du **proxy Velocity** (4.2+, Java 25), comme EterLib côté Paper. Document
-développeur, à tenir à jour avec le code. Utilisé par **EterVelocityLobby**, **EterVelocityResource** et **EterVelocityModeration**.
+développeur, à tenir à jour avec le code. Utilisé par **EterVelocityLobby**, **EterVelocityResource**, **EterVelocityModeration**, **EterVelocityBroadcast** et **EterTab** (côté proxy).
 
 ## Contenu
 
@@ -11,7 +11,8 @@ développeur, à tenir à jour avec le code. Utilisé par **EterVelocityLobby**,
   plugin), `query` / `execute` avec paramètres, bloquant (tâche de fond). La base du réseau :
   `EterVelocityLib.get().database()`, ouverte au premier appel avec les accès de `plugins/etervelocitylib/EterLib-config.yml`
   (le même fichier que pour les serveurs créés) ; l'orchestrateur ouvre la sienne avec la config de sa famille.
-- **`helper/Messages`** : MiniMessage avec la palette et le préfixe communs, réglés UNE fois dans le `config.yml`
+- **`helper/Messages`** : MiniMessage avec la palette et le préfixe communs ; `legacy(texte)` pour les endroits qui
+  n'acceptent qu'un texte simple (MOTD), réglés UNE fois dans le `config.yml`
   d'EterVelocityLib (à garder identiques à `EterLib/config.yml`). Obtenu par
   `EterVelocityLib.get().messages(MonPlugin.class, dataDirectory, logger)`.
 - **`orchestrator`** : le moteur des serveurs jetables sur Pterodactyl, par **famille** (`eterlobby`,
@@ -49,8 +50,9 @@ développeur, à tenir à jour avec le code. Utilisé par **EterVelocityLobby**,
   - panel en `https://` obligatoire ; clés et mots de passe jamais écrits dans la console (erreurs YAML sans la ligne
     fautive, pas de trace complète).
 - **Base** : celle d'EterVelocityLib (`database()`, même fichier) ; pilote MariaDB téléchargé au premier démarrage dans `libs/` et
-  ajouté au proxy (`addToClasspath`) : rien d'embarqué. À la suppression, les lignes du serveur dans les tables
-  « traces » du plugin (ex : `eter_servers`, `eterhub_lobbies`) sont retirées aussi.
+  ajouté au proxy (`addToClasspath`) : rien d'embarqué. À la suppression, seule sa ligne de
+  `<famille>_servers` est retirée : chaque plugin nettoie ses propres tables (EterLib oublie un serveur muet depuis un
+  jour ; EterHub et EterResource effacent leurs lignes trop vieilles).
 
 ## Technique
 
