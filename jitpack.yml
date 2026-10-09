@@ -8,7 +8,8 @@
 jdk:
   - openjdk21
 before_install:
+  - sdk install java 21.0.2-open || true
   - curl -fsSL -o gradle-dist.zip https://services.gradle.org/distributions/gradle-9.7.1-bin.zip
   - unzip -q -o gradle-dist.zip -d gradle-dist
 install:
-  - GRADLE_USER_HOME="$PWD/gradle-home" gradle-dist/gradle-9.7.1/bin/gradle publishToMavenLocal --no-daemon
+  - JAVA_HOME="$HOME/.sdkman/candidates/java/21.0.2-open" GRADLE_USER_HOME="$PWD/gradle-home" gradle-dist/gradle-9.7.1/bin/gradle publishToMavenLocal --no-daemon
