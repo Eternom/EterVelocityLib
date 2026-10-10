@@ -32,7 +32,8 @@ développeur, à tenir à jour avec le code. Utilisé par **EterVelocityLobby**,
   `cache/<dépôt>/<tag>/` ; le jeton GitHub ne part qu'à l'API, jamais au téléchargement des jars.
 - **Création** : ligne `CREATING` en base **avant** le panel (une création interrompue reste retrouvable) → serveur
   créé par **déploiement automatique** (`location-id`, `port-range` facultatif ; œuf, propriétaire dédié, identifiant
-  externe `<famille>:<nom>`) → attente de l'installation → envoi de l'archive, décompression → jars dans `plugins/` →
+  externe `<famille>:<nom>`) → attente de l'installation → envoi de l'archive (taille reçue vérifiée, jusqu'à 3 envois),
+  décompression → jars dans `plugins/` →
   config d'EterLib → démarrage → ajout à Velocity → `ACTIVE` dès qu'il répond. Échec : suppression (sûre), puis 5 min
   de pause avant une autre création (pas de boucle si la base ou le panel sature).
 - **Règles** (`servers:` du plugin, toutes les 30 s, un seul fil) : au moins `minimum` serveurs **à jour** ; un de plus

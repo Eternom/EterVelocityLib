@@ -381,7 +381,7 @@ public class ServerPool {
         Optional<Path> archive = archive();
         if (archive.isPresent()) {
             String archiveName = archive.get().getFileName().toString();
-            panel.upload(id, "/", List.of(archive.get()));
+            uploadChecked(id, archive.get());
             panel.decompress(id, archiveName);
             panel.deleteFile(id, archiveName);
         } else {
@@ -397,6 +397,25 @@ public class ServerPool {
         panel.write(id, "/plugins/EterLib/config.yml", Files.readString(eterLibTemplate(), StandardCharsets.UTF_8)
                 .replace("%server%", row.name()).replace("%display%", displayName(row.name())));
         panel.power(id, "start");
+    }
+
+    /**
+     * Envoie le modèle et vérifie que Wings l'a reçu en entier : entre deux hébergeurs, un gros envoi peut arriver coupé
+     * (Wings échoue alors à la décompression : « unexpected EOF »). Jusqu'à 3 envois avant d'abandonner.
+     */
+    private void uploadChecked(String id, Path archive) throws IOException {
+        long expected = Files.size(archive);
+        String name = archive.getFileName().toString();
+        long received = -1;
+        for (int attempt = 1; attempt <= 3; attempt++) {
+            panel.upload(id, "/", List.of(archive));
+            received = panel.fileSize(id, name);
+            if (received == expected) {
+                return;
+            }
+            logger.warn("Modèle {} incomplet sur le serveur ({} octets reçus sur {}), nouvel envoi ({}/3)", name, received, expected, attempt);
+        }
+        throw new IOException("modèle " + name + " incomplet après 3 envois (" + received + " octets reçus sur " + expected + ")");
     }
 
     private JsonObject serverBody(Row row) throws IOException {

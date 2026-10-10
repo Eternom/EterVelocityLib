@@ -118,11 +118,23 @@ final class Pterodactyl {
         }
         body.writeBytes(("--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
         HttpRequest request = HttpRequest.newBuilder(URI.create(signed + "&directory=" + URLEncoder.encode(directory, StandardCharsets.UTF_8)))
-                .timeout(Duration.ofMinutes(5))
+                .timeout(Duration.ofMinutes(15))
                 .header("Content-Type", "multipart/form-data; boundary=" + boundary)
                 .POST(HttpRequest.BodyPublishers.ofByteArray(body.toByteArray()))
                 .build();
         check(send(request), "envoi de fichiers");
+    }
+
+    /** Taille d'un fichier à la racine du serveur, telle que Wings l'a reçu ; -1 s'il n'y est pas. */
+    long fileSize(String identifier, String file) throws IOException {
+        JsonObject list = client("GET", identifier, "/files/list?directory=" + URLEncoder.encode("/", StandardCharsets.UTF_8), null);
+        for (JsonElement entry : list.getAsJsonArray("data")) {
+            JsonObject attributes = entry.getAsJsonObject().getAsJsonObject("attributes");
+            if (file.equals(attributes.get("name").getAsString())) {
+                return attributes.get("size").getAsLong();
+            }
+        }
+        return -1;
     }
 
     void decompress(String identifier, String file) throws IOException {
