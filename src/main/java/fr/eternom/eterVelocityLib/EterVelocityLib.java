@@ -30,7 +30,7 @@ import java.util.Map;
  * réglés une seule fois (config.yml), langues avec textes communs, et le moteur des serveurs jetables (orchestrator).
  * Chargé au démarrage du proxy, avant les plugins qui en dépendent (@Dependency(id = "etervelocitylib")).
  */
-@Plugin(id = "etervelocitylib", name = "EterVelocityLib", version = "1.4.3", authors = {"NadTum"},
+@Plugin(id = "etervelocitylib", name = "EterVelocityLib", version = "1.4.4", authors = {"NadTum"},
         description = "Socle commun des plugins Eter du proxy")
 public final class EterVelocityLib {
 

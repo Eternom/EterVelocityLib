@@ -400,21 +400,32 @@ public class ServerPool {
     }
 
     /**
-     * Démarre le serveur et vérifie qu'il démarre vraiment : juste après l'envoi des fichiers, Wings ignore parfois
-     * l'ordre (le serveur reste « offline » jusqu'à un clic sur Start). L'ordre est renvoyé, jusqu'à 3 fois.
+     * Démarre le serveur et vérifie qu'il démarre vraiment : juste après l'envoi des fichiers, Wings accepte parfois
+     * l'ordre puis l'annule (« starting » un instant, puis de nouveau « offline » : il faut alors cliquer sur Start).
+     * On attend « running » (le serveur a fini de démarrer) ; retombé à « offline », l'ordre est renvoyé, jusqu'à 5 fois.
+     * Toujours « starting » après 3 min : on laisse le temps au serveur (waitReachable décide ensuite).
      */
     private void start(String id) throws Exception {
-        for (int attempt = 1; attempt <= 3; attempt++) {
+        for (int attempt = 1; attempt <= 5; attempt++) {
+            TimeUnit.SECONDS.sleep(attempt == 1 ? 3 : 10); // laisser Wings finir d'écrire les fichiers
             panel.power(id, "start");
-            for (int check = 0; check < 6; check++) {
+            String state = "offline";
+            for (int check = 0; check < 36; check++) {
                 TimeUnit.SECONDS.sleep(5);
-                if (!"offline".equals(panel.state(id))) {
+                state = panel.state(id);
+                if ("running".equals(state)) {
                     return;
                 }
+                if ("offline".equals(state) && check >= 2) {
+                    break; // démarrage annulé (ou jamais commencé) : nouvel ordre
+                }
             }
-            logger.warn("Serveur {} toujours arrêté 30 s après l'ordre de démarrage, nouvel ordre ({}/3)", id, attempt);
+            if (!"offline".equals(state)) {
+                return; // toujours en démarrage après 3 min : il continue
+            }
+            logger.warn("Serveur {} retombé à l'arrêt après l'ordre de démarrage, nouvel ordre ({}/5)", id, attempt);
         }
-        throw new IOException("ne démarre pas après 3 ordres de démarrage");
+        throw new IOException("ne démarre pas après 5 ordres de démarrage");
     }
 
     /**
