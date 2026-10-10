@@ -166,6 +166,11 @@ final class Pterodactyl {
         check(send(request), "écriture de " + path);
     }
 
+    /** État du serveur d'après Wings : offline, starting, running ou stopping. */
+    String state(String identifier) throws IOException {
+        return client("GET", identifier, "/resources", null).getAsJsonObject("attributes").get("current_state").getAsString();
+    }
+
     void power(String identifier, String signal) throws IOException {
         JsonObject body = new JsonObject();
         body.addProperty("signal", signal);

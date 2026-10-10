@@ -34,7 +34,7 @@ développeur, à tenir à jour avec le code. Utilisé par **EterVelocityLobby**,
   créé par **déploiement automatique** (`location-id`, `port-range` facultatif ; œuf, propriétaire dédié, identifiant
   externe `<famille>:<nom>`) → attente de l'installation → envoi de l'archive (taille reçue vérifiée, jusqu'à 3 envois),
   décompression → jars dans `plugins/` →
-  config d'EterLib → démarrage → ajout à Velocity → `ACTIVE` dès qu'il répond. Échec : suppression (sûre), puis 5 min
+  config d'EterLib → démarrage (vérifié auprès du panel, ordre renvoyé jusqu'à 3 fois) → ajout à Velocity → `ACTIVE` dès qu'il répond. Échec : suppression (sûre), puis 5 min
   de pause avant une autre création (pas de boucle si la base ou le panel sature).
 - **Règles** (`servers:` du plugin, toutes les 30 s, un seul fil) : au moins `minimum` serveurs **à jour** ; un de plus
   quand ils sont remplis à `scale-up-at` (au plus `maximum`) ; une ancienne version (empreinte de l'archive, de

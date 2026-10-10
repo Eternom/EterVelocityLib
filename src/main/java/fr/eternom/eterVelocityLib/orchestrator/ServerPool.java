@@ -396,7 +396,25 @@ public class ServerPool {
         panel.upload(id, "/plugins", jars);
         panel.write(id, "/plugins/EterLib/config.yml", Files.readString(eterLibTemplate(), StandardCharsets.UTF_8)
                 .replace("%server%", row.name()).replace("%display%", displayName(row.name())));
-        panel.power(id, "start");
+        start(id);
+    }
+
+    /**
+     * Démarre le serveur et vérifie qu'il démarre vraiment : juste après l'envoi des fichiers, Wings ignore parfois
+     * l'ordre (le serveur reste « offline » jusqu'à un clic sur Start). L'ordre est renvoyé, jusqu'à 3 fois.
+     */
+    private void start(String id) throws Exception {
+        for (int attempt = 1; attempt <= 3; attempt++) {
+            panel.power(id, "start");
+            for (int check = 0; check < 6; check++) {
+                TimeUnit.SECONDS.sleep(5);
+                if (!"offline".equals(panel.state(id))) {
+                    return;
+                }
+            }
+            logger.warn("Serveur {} toujours arrêté 30 s après l'ordre de démarrage, nouvel ordre ({}/3)", id, attempt);
+        }
+        throw new IOException("ne démarre pas après 3 ordres de démarrage");
     }
 
     /**
