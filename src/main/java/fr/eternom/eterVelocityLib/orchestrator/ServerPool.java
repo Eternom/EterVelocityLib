@@ -386,8 +386,7 @@ public class ServerPool {
             panel.deleteFile(id, archiveName);
             // Le modèle peut ne pas l'avoir (ou avec eula=false) : sans lui, Paper s'arrête aussitôt (« You need to agree to
             // the EULA »), le panel le voit planter et ne le relance pas. L'EULA est acceptée par l'exploitant du réseau.
-            panel.write(id, "/eula.txt", "eula=true
-");
+            panel.write(id, "/eula.txt", "eula=true\n");
         } else {
             for (Map.Entry<String, String> file : baseFiles(row).entrySet()) {
                 panel.write(id, file.getKey(), file.getValue());
