@@ -34,7 +34,8 @@ développeur, à tenir à jour avec le code. Utilisé par **EterVelocityLobby**,
   créé par **déploiement automatique** (`location-id`, `port-range` facultatif ; œuf, propriétaire dédié, identifiant
   externe `<famille>:<nom>`) → attente de l'installation → **dépôt du jar de Paper** (API Fill v3 de PaperMC, version
   `MINECRAFT_VERSION` : l'ancienne API du script des œufs est fermée ; téléchargé par le panel, sinon envoyé depuis le
-  proxy, cache `cache/paper`) → envoi de l'archive (taille reçue vérifiée, jusqu'à 3 envois), `eula.txt` toujours écrit,
+  proxy, cache `cache/paper`) → pour une famille à monde neuf (`orchestrator.fresh-world`, vrai par défaut pour `eterresource`), les dossiers `world*` du
+  modèle sont retirés → envoi de l'archive (taille reçue vérifiée, jusqu'à 3 envois), `eula.txt` toujours écrit,
   décompression → jars dans `plugins/` →
   config d'EterLib → démarrage (on attend « running » auprès du panel, ordre renvoyé jusqu'à 5 fois s'il retombe à l'arrêt) → ajout à Velocity → `ACTIVE` dès qu'il répond. Échec : suppression (sûre), puis 5 min
   de pause avant une autre création (pas de boucle si la base ou le panel sature).

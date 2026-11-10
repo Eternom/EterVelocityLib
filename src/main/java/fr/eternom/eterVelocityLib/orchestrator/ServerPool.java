@@ -90,6 +90,8 @@ public class ServerPool {
     private final Releases releases;
     private final PaperJar paperJar;
     private final Path paperCache;
+    /** Monde neuf à chaque serveur (mondes ressources) : les dossiers de monde du modèle sont retirés. */
+    private final boolean freshWorld;
     private final Path template;
     /** Lignes de server.properties en plus (orchestrator.server-properties), pour un serveur sans modèle. */
     private final Map<String, String> serverProperties;
@@ -132,6 +134,7 @@ public class ServerPool {
         this.releases = new Releases(config.getString("orchestrator.github-token", ""), dataDirectory.resolve("cache"));
         this.paperCache = dataDirectory.resolve("cache").resolve("paper");
         this.paperJar = new PaperJar(paperCache);
+        this.freshWorld = config.getBoolean("orchestrator.fresh-world", family.equals("eterresource"));
         this.template = dataDirectory.resolve("template");
         Map<String, String> properties = new java.util.LinkedHashMap<>();
         for (String key : config.getKeys("orchestrator.server-properties")) {
@@ -389,6 +392,16 @@ public class ServerPool {
             uploadChecked(id, archive.get());
             panel.decompress(id, archiveName);
             panel.deleteFile(id, archiveName);
+            if (freshWorld) {
+                // Un modèle qui contient un monde (même incomplet) empêche Paper d'en générer un neuf (« Overworld settings missing »)
+                for (String world : List.of("world", "world_nether", "world_the_end")) {
+                    try {
+                        panel.deleteFile(id, world);
+                    } catch (IOException ignored) {
+                        // pas de ce monde dans le modèle
+                    }
+                }
+            }
             // Le modèle peut ne pas l'avoir (ou avec eula=false) : sans lui, Paper s'arrête aussitôt (« You need to agree to
             // the EULA »), le panel le voit planter et ne le relance pas. L'EULA est acceptée par l'exploitant du réseau.
             panel.write(id, "/eula.txt", "eula=true\n");
