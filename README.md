@@ -32,7 +32,7 @@ développeur, à tenir à jour avec le code. Utilisé par **EterVelocityLobby**,
   `cache/<dépôt>/<tag>/` ; le jeton GitHub ne part qu'à l'API, jamais au téléchargement des jars.
 - **Création** : ligne `CREATING` en base **avant** le panel (une création interrompue reste retrouvable) → serveur
   créé par **déploiement automatique** (`location-id`, `port-range` facultatif ; œuf, propriétaire dédié, identifiant
-  externe `<famille>:<nom>`) → attente de l'installation → **dépôt du jar de Paper** (API Fill v3 de PaperMC, version
+  externe `<famille>:<nom>`) → attente de l'installation → **graine** (`orchestrator.seeds`, une au hasard, écrite dans server.properties même avec un modèle) → **dépôt du jar de Paper** (API Fill v3 de PaperMC, version
   `MINECRAFT_VERSION` : l'ancienne API du script des œufs est fermée ; téléchargé par le panel, sinon envoyé depuis le
   proxy, cache `cache/paper`) → pour une famille à monde neuf (`orchestrator.fresh-world`, vrai par défaut pour `eterresource`), les dossiers `world*` du
   modèle sont retirés → envoi de l'archive (taille reçue vérifiée, jusqu'à 3 envois), `eula.txt` toujours écrit,
@@ -65,3 +65,8 @@ développeur, à tenir à jour avec le code. Utilisé par **EterVelocityLobby**,
 - Compilé par les plugins via JitPack : `compileOnly("com.github.Eternom:EterVelocityLib:<tag>")` (pousser le tag
   d'EterVelocityLib AVANT ceux des plugins qui en dépendent).
 - La version est aussi écrite dans `@Plugin` : à garder identique à `gradle.properties`.
+
+## Orchestrateur : depuis 1.5.0
+
+- Une version figée par plugin : `Organisation/Dépôt@tag` (sinon la dernière release).
+- Le staff connecté au proxy avec `eterorchestrator.notify` est prévenu des créations, échecs et suppressions.

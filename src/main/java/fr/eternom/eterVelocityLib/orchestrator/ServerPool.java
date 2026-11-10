@@ -92,6 +92,8 @@ public class ServerPool {
     private final Path paperCache;
     /** Monde neuf à chaque serveur (mondes ressources) : les dossiers de monde du modèle sont retirés. */
     private final boolean freshWorld;
+    /** Graines possibles d'un monde neuf (orchestrator.seeds) : une au hasard par serveur ; vide : celle de Minecraft. */
+    private final List<String> seeds;
     private final Path template;
     /** Lignes de server.properties en plus (orchestrator.server-properties), pour un serveur sans modèle. */
     private final Map<String, String> serverProperties;
@@ -135,6 +137,7 @@ public class ServerPool {
         this.paperCache = dataDirectory.resolve("cache").resolve("paper");
         this.paperJar = new PaperJar(paperCache);
         this.freshWorld = config.getBoolean("orchestrator.fresh-world", family.equals("eterresource"));
+        this.seeds = config.getStringList("orchestrator.seeds");
         this.template = dataDirectory.resolve("template");
         Map<String, String> properties = new java.util.LinkedHashMap<>();
         for (String key : config.getKeys("orchestrator.server-properties")) {
@@ -235,7 +238,7 @@ public class ServerPool {
     }
 
     /** Commande drain <serveur>. */
-    boolean requestDrain(String name) {
+    public boolean requestDrain(String name) {
         Row row = rows.get(name);
         if (row == null || row.state() != State.ACTIVE) {
             return false;
@@ -358,10 +361,12 @@ public class ServerPool {
                 row = row.with(State.ACTIVE);
                 save(row);
                 logger.info("Serveur {} prêt", name);
+                notifyStaff("Serveur " + name + " prêt");
             } catch (Exception e) {
                 createBlockedUntil = System.currentTimeMillis() + CREATE_BACKOFF.toMillis();
                 logger.error("Création du serveur {} ratée : {} (suppression ; prochain essai dans {} min)", name, e.getMessage(),
                         CREATE_BACKOFF.toMinutes());
+                notifyStaff("Création du serveur " + name + " ratée : " + e.getMessage());
                 safeDelete(row);
             }
         } catch (Exception e) {
@@ -410,6 +415,7 @@ public class ServerPool {
                 panel.write(id, file.getKey(), file.getValue());
             }
         }
+        applySeed(id);
         List<Path> jars = new ArrayList<>();
         for (Release release : versionReleases) {
             jars.add(releases.jar(release));
@@ -463,6 +469,44 @@ public class ServerPool {
             throw new IOException("jar de Paper " + build.id() + " non déposé");
         }
         logger.info("Paper {} build {} déposé sur {}", version, build.id(), id);
+    }
+
+    /** Une graine de orchestrator.seeds dans server.properties (modèle compris). */
+    private void applySeed(String id) {
+        if (seeds.isEmpty()) {
+            return;
+        }
+        String seed = seeds.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(seeds.size())).trim();
+        try {
+            String properties;
+            try {
+                properties = panel.read(id, "/server.properties");
+            } catch (IOException missing) {
+                properties = "";
+            }
+            StringBuilder next = new StringBuilder();
+            for (String line : properties.split("\\R")) {
+                if (!line.startsWith("level-seed=") && !line.isEmpty()) {
+                    next.append(line).append('\n');
+                }
+            }
+            next.append("level-seed=").append(seed).append('\n');
+            panel.write(id, "/server.properties", next.toString());
+            logger.info("Graine du monde de {} : {}", id, seed);
+        } catch (IOException e) {
+            logger.warn("Graine non écrite sur {} : {}", id, e.getMessage());
+        }
+    }
+
+    /** Le staff connecté au proxy (eterorchestrator.notify) est prévenu des créations et suppressions. */
+    private void notifyStaff(String text) {
+        net.kyori.adventure.text.Component message = net.kyori.adventure.text.Component.text("[" + family + "] " + text,
+                net.kyori.adventure.text.format.NamedTextColor.GRAY);
+        for (Player player : proxy.getAllPlayers()) {
+            if (player.hasPermission("eterorchestrator.notify")) {
+                player.sendMessage(message);
+            }
+        }
     }
 
     /** Les dernières lignes de logs/latest.log du serveur dans la console du proxy (pourquoi il ne démarre pas). */
@@ -648,6 +692,7 @@ public class ServerPool {
             emptySince.remove(row.name());
             unreachableSince.remove(row.name());
             logger.info("Serveur {} supprimé", row.name());
+            notifyStaff("Serveur " + row.name() + " supprimé");
         } catch (Exception e) {
             logger.warn("Suppression de {} : {} (nouvel essai au prochain passage)", row.name(), e.getMessage());
         }

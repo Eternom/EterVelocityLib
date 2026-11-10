@@ -21,13 +21,23 @@ import java.time.Duration;
  */
 final class Releases {
 
-    /** source = "Eternom/EterTab:EterTab-Paper" : dépôt, puis début du nom du jar (par défaut le nom du dépôt). */
-    record Plugin(String repo, String assetPrefix) {
+    /**
+     * source = "Eternom/EterTab:EterTab-Paper" : dépôt, puis début du nom du jar (par défaut le nom du dépôt). Une version
+     * figée : « Eternom/EterJob@3.1.0 » (sinon la dernière release ; tag null).
+     */
+    record Plugin(String repo, String assetPrefix, String tag) {
 
         static Plugin parse(String source) {
-            String[] parts = source.trim().split(":", 2);
+            String text = source.trim();
+            String tag = null;
+            int at = text.lastIndexOf('@');
+            if (at > 0) {
+                tag = text.substring(at + 1).trim();
+                text = text.substring(0, at);
+            }
+            String[] parts = text.split(":", 2);
             String repo = parts[0];
-            return new Plugin(repo, parts.length > 1 ? parts[1] : repo.substring(repo.indexOf('/') + 1));
+            return new Plugin(repo, parts.length > 1 ? parts[1] : repo.substring(repo.indexOf('/') + 1), tag == null || tag.isBlank() ? null : tag);
         }
     }
 
@@ -47,7 +57,8 @@ final class Releases {
     }
 
     Release latest(Plugin plugin) throws IOException {
-        HttpResponse<String> response = send(request("https://api.github.com/repos/" + plugin.repo() + "/releases/latest", true)
+        HttpResponse<String> response = send(request("https://api.github.com/repos/" + plugin.repo() + (plugin.tag() == null ? "/releases/latest"
+                        : "/releases/tags/" + plugin.tag()), true)
                 .header("Accept", "application/vnd.github+json").build(), HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() != 200) {
             throw new IOException("GitHub : release de " + plugin.repo() + " -> " + response.statusCode());
