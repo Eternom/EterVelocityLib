@@ -70,3 +70,9 @@ développeur, à tenir à jour avec le code. Utilisé par **EterVelocityLobby**,
 
 - Une version figée par plugin : `Organisation/Dépôt@tag` (sinon la dernière release).
 - Le staff connecté au proxy avec `eterorchestrator.notify` est prévenu des créations, échecs et suppressions.
+
+## Pack de ressources : depuis 1.6.0
+
+- `resource-pack` (config.yml) : le proxy relit le manifeste `pack.json` du bucket public (publié par le dépôt
+  `EterCraft/resourcepack`) et impose le pack aux joueurs Java à leur arrivée (Bedrock ignorés) ; refusé ou en échec :
+  déconnecté avec une explication ; `push-to-online` envoie aussi un nouveau pack aux joueurs en ligne.

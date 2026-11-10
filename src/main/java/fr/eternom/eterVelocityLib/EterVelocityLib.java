@@ -44,6 +44,8 @@ public final class EterVelocityLib {
     private final Path dataDirectory;
     private final ProxyServer proxy;
     private Sql database;
+    /** Pack de ressources (config.yml > resource-pack), démarré avec le proxy ; null s'il est coupé. */
+    private fr.eternom.eterVelocityLib.resourcepack.ResourcePacks resourcePacks;
 
     @Inject
     public EterVelocityLib(ProxyServer proxy, Logger logger, @DataDirectory Path dataDirectory) throws IOException {
@@ -63,7 +65,21 @@ public final class EterVelocityLib {
         this.palette = TagResolver.resolver(colors);
         this.prefix = MiniMessage.miniMessage().deserialize(config.getString("prefix", ""), palette);
         this.common = new Lang(EterVelocityLib.class, dataDirectory, defaultLocale, logger, null);
+        if (config.getBoolean("resource-pack.enabled", false)) {
+            this.resourcePacks = new fr.eternom.eterVelocityLib.resourcepack.ResourcePacks(proxy, this, logger,
+                    new fr.eternom.eterVelocityLib.helper.Messages(common, palette, prefix),
+                    config.getString("resource-pack.manifest-url", ""), config.getBoolean("resource-pack.required", true),
+                    config.getInt("resource-pack.poll-seconds", 300), config.getBoolean("resource-pack.push-to-online", false));
+        }
         instance = this;
+    }
+
+    /** Démarrage du proxy : le pack de ressources commence à suivre son manifeste. */
+    @com.velocitypowered.api.event.Subscribe
+    public void onInit(com.velocitypowered.api.event.proxy.ProxyInitializeEvent event) {
+        if (resourcePacks != null) {
+            resourcePacks.start();
+        }
     }
 
     public static EterVelocityLib get() {

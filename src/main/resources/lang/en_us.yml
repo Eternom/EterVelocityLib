@@ -19,3 +19,7 @@ orchestrator:
   mode-dry-run: "dry run"
   mode-real: "live"
   status: "<info>Orchestrator <accent><family></accent> <accent><mode></accent> (ready: <ready>) · <minimum> to <maximum> servers of <capacity> players · version: <accent><version>"
+resource-pack:
+  prompt: "<primary>Network pack</primary> <info>· Eternom textures and items. It is required to play."
+  declined: "<error>The resource pack is required to play on Eternom.\n<info>Try again and accept it (Multiplayer > Edit server > Resource packs: Enabled)."
+  failed: "<error>The resource pack could not be loaded.\n<info>Try again in a moment; if it keeps happening, tell the staff."

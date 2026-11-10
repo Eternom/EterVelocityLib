@@ -19,3 +19,7 @@ orchestrator:
   mode-dry-run: "en essai"
   mode-real: "réel"
   status: "<info>Orchestrateur <accent><family></accent> <accent><mode></accent> (prêt : <ready>) · <minimum> à <maximum> serveurs de <capacity> joueurs · version : <accent><version>"
+resource-pack:
+  prompt: "<primary>Pack du réseau</primary> <info>· textures et objets d'Eternom. Il est nécessaire pour jouer."
+  declined: "<error>Le pack de ressources est nécessaire pour jouer sur Eternom.\n<info>Réessaie et accepte-le (Multijoueur > Modifier le serveur > Packs de ressources : Activé)."
+  failed: "<error>Le pack de ressources n'a pas pu être chargé.\n<info>Réessaie dans un instant ; si ça continue, préviens le staff."

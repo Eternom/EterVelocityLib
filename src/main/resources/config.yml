@@ -23,3 +23,14 @@ colors:
   info: gray           # texte courant (gris clair)
   error: '#FF5C5C'
   success: '#5FD38D'
+
+# Pack de ressources du réseau, imposé aux joueurs Java (les joueurs Bedrock sont ignorés). Le dépôt
+# EterCraft/resourcepack le publie dans le bucket public et met à jour le manifeste (pack.json : url, sha1, version) ;
+# le proxy le relit toutes les poll-seconds. required : refuser le pack = déconnecté ; push-to-online : un nouveau pack
+# est aussi envoyé aux joueurs déjà en ligne (sinon seulement aux suivants).
+resource-pack:
+  enabled: false
+  manifest-url: "https://ec-resourcepack-001.s3.gra.io.cloud.ovh.net/pack.json"
+  required: true
+  poll-seconds: 300
+  push-to-online: false
