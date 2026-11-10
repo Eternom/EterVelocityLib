@@ -88,6 +88,8 @@ public class ServerPool {
     private final boolean hasApplicationKey;
     private final boolean hasClientKey;
     private final Releases releases;
+    private final PaperJar paperJar;
+    private final Path paperCache;
     private final Path template;
     /** Lignes de server.properties en plus (orchestrator.server-properties), pour un serveur sans modèle. */
     private final Map<String, String> serverProperties;
@@ -128,6 +130,8 @@ public class ServerPool {
         // Les clés ne vont qu'au client du panel : jamais gardées ailleurs, jamais écrites dans la console
         this.panel = new Pterodactyl(panelUrl, applicationKey, clientKey);
         this.releases = new Releases(config.getString("orchestrator.github-token", ""), dataDirectory.resolve("cache"));
+        this.paperCache = dataDirectory.resolve("cache").resolve("paper");
+        this.paperJar = new PaperJar(paperCache);
         this.template = dataDirectory.resolve("template");
         Map<String, String> properties = new java.util.LinkedHashMap<>();
         for (String key : config.getKeys("orchestrator.server-properties")) {
@@ -378,6 +382,7 @@ public class ServerPool {
             TimeUnit.SECONDS.sleep(10);
         }
         String id = row.identifier();
+        ensurePaper(id);
         Optional<Path> archive = archive();
         if (archive.isPresent()) {
             String archiveName = archive.get().getFileName().toString();
@@ -400,6 +405,67 @@ public class ServerPool {
         panel.write(id, "/plugins/EterLib/config.yml", Files.readString(eterLibTemplate(), StandardCharsets.UTF_8)
                 .replace("%server%", row.name()).replace("%display%", displayName(row.name())));
         start(id);
+    }
+
+    /**
+     * Dépose le jar de Paper (API Fill v3) à la place de celui de l'installation : le script des œufs passe par
+     * l'ancienne API de PaperMC, fermée (410), et laisse un server.jar vide ou abîmé. D'abord téléchargé par le panel
+     * lui-même (rapide) ; s'il n'y arrive pas, envoyé depuis le proxy (gardé en cache). Version : MINECRAFT_VERSION.
+     */
+    private void ensurePaper(String id) throws Exception {
+        String version = settings.environment().getOrDefault("MINECRAFT_VERSION", "");
+        if (version.isBlank() || version.equalsIgnoreCase("latest")) {
+            logger.warn("MINECRAFT_VERSION absente ou « latest » : le jar de Paper de l'installation est gardé tel quel");
+            return;
+        }
+        String jar = settings.environment().getOrDefault("SERVER_JARFILE", "server.jar");
+        if (jar.isBlank()) {
+            jar = "server.jar";
+        }
+        PaperJar.Build build = paperJar.latest(version);
+        if (panel.fileSize(id, jar) == build.size()) {
+            return; // déjà le bon (installation réussie)
+        }
+        try {
+            panel.deleteFile(id, jar);
+        } catch (IOException ignored) {
+            // absent : rien à supprimer
+        }
+        try {
+            panel.pull(id, build.url(), jar);
+            for (int check = 0; check < 24 && panel.fileSize(id, jar) != build.size(); check++) {
+                TimeUnit.SECONDS.sleep(5);
+            }
+        } catch (IOException e) {
+            logger.warn("Le panel n'a pas pu télécharger Paper lui-même ({}) : envoi depuis le proxy", e.getMessage());
+        }
+        if (panel.fileSize(id, jar) != build.size()) {
+            Path local = paperJar.local(build);
+            Path upload = paperCache.resolve("upload").resolve(jar);
+            Files.createDirectories(upload.getParent());
+            Files.copy(local, upload, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            panel.upload(id, "/", List.of(upload));
+        }
+        if (panel.fileSize(id, jar) != build.size()) {
+            throw new IOException("jar de Paper " + build.id() + " non déposé");
+        }
+        logger.info("Paper {} build {} déposé sur {}", version, build.id(), id);
+    }
+
+    /** Les dernières lignes de logs/latest.log du serveur dans la console du proxy (pourquoi il ne démarre pas). */
+    private void logTail(String id) {
+        try {
+            String log = panel.read(id, "/logs/latest.log");
+            String[] lines = log.split("\\R");
+            int from = Math.max(0, lines.length - 25);
+            logger.error("Dernières lignes de logs/latest.log de {} :", id);
+            for (int i = from; i < lines.length; i++) {
+                logger.error("  | {}", lines[i]);
+            }
+        } catch (IOException e) {
+            logger.error("Pas de logs/latest.log sur {} ({}) : le serveur ne s'est sans doute pas lancé du tout (jar, Java, EULA)",
+                    id, e.getMessage());
+        }
     }
 
     /**
@@ -428,6 +494,7 @@ public class ServerPool {
             }
             logger.warn("Serveur {} retombé à l'arrêt après l'ordre de démarrage, nouvel ordre ({}/5)", id, attempt);
         }
+        logTail(id);
         throw new IOException("ne démarre pas après 5 ordres de démarrage");
     }
 

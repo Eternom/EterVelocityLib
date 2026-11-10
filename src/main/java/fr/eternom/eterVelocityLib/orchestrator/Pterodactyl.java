@@ -137,6 +137,17 @@ final class Pterodactyl {
         return -1;
     }
 
+    /** Le panel télécharge lui-même un fichier (à la racine du serveur, sous ce nom), en attendant la fin. */
+    void pull(String identifier, String url, String filename) throws IOException {
+        JsonObject body = new JsonObject();
+        body.addProperty("url", url);
+        body.addProperty("directory", "/");
+        body.addProperty("filename", filename);
+        body.addProperty("use_header", false);
+        body.addProperty("foreground", true);
+        client("POST", identifier, "/files/pull", body);
+    }
+
     void decompress(String identifier, String file) throws IOException {
         JsonObject body = new JsonObject();
         body.addProperty("root", "/");
@@ -151,6 +162,19 @@ final class Pterodactyl {
         files.add(file);
         body.add("files", files);
         client("POST", identifier, "/files/delete", body);
+    }
+
+    /** Contenu d'un fichier texte du serveur. */
+    String read(String identifier, String path) throws IOException {
+        HttpRequest request = HttpRequest.newBuilder(URI.create(url + "/api/client/servers/" + identifier
+                        + "/files/contents?file=" + URLEncoder.encode(path, StandardCharsets.UTF_8)))
+                .timeout(TIMEOUT)
+                .header("Authorization", "Bearer " + clientKey)
+                .GET()
+                .build();
+        HttpResponse<String> response = send(request);
+        check(response, "lecture de " + path);
+        return response.body();
     }
 
     /** Écrit un fichier texte (les dossiers manquants sont créés par le panel). */
