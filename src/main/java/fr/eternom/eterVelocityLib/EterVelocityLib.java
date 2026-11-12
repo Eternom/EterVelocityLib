@@ -79,6 +79,14 @@ public final class EterVelocityLib {
     public void onInit(com.velocitypowered.api.event.proxy.ProxyInitializeEvent event) {
         if (resourcePacks != null) {
             resourcePacks.start();
+            // /pack : recharger le pack tout de suite (après une mise à jour, ou s'il s'est mal chargé)
+            com.velocitypowered.api.command.CommandManager commands = proxy.getCommandManager();
+            commands.register(commands.metaBuilder("pack").aliases("resourcepack").plugin(this).build(),
+                    (com.velocitypowered.api.command.SimpleCommand) invocation -> {
+                        if (invocation.source() instanceof com.velocitypowered.api.proxy.Player player) {
+                            resourcePacks.resend(player);
+                        }
+                    });
         }
     }
 

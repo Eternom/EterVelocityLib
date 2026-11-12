@@ -27,6 +27,8 @@ import java.util.concurrent.TimeUnit;
  * dans le bucket public et met à jour un manifeste (pack.json : url, sha1, version) ; ce module le relit toutes les
  * poll-seconds : un nouveau pack est proposé aux joueurs qui arrivent, et à ceux en ligne si push-to-online. Les joueurs
  * Bedrock (Floodgate : UUID qui commence par des zéros) sont ignorés. Réglages : config.yml > resource-pack.
+ * Sans push-to-online, les joueurs en ligne sont prévenus d'un nouveau pack, avec un bouton qui le charge (/pack).
+ * Un pack de plus de 50 Mo est signalé dans la console (téléchargement long pour les joueurs).
  */
 public final class ResourcePacks {
 
@@ -42,6 +44,7 @@ public final class ResourcePacks {
     private final boolean required;
     private final int pollSeconds;
     private final boolean pushToOnline;
+    private final long sizeWarningBytes = 50L * 1024 * 1024;
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
     private volatile Pack current;
 
@@ -84,10 +87,40 @@ public final class ResourcePacks {
             logger.info("Pack de ressources : version {} ({})", next.version(), next.url());
             if (before != null && pushToOnline) {
                 proxy.getAllPlayers().forEach(this::send);
+            } else if (before != null) {
+                // Sans l'imposer : chacun peut le charger tout de suite (/pack), ou le recevra à sa prochaine connexion
+                proxy.getAllPlayers().stream().filter(player -> !bedrock(player))
+                        .forEach(player -> player.sendMessage(messages.get(player, "resource-pack.updated", TagResolver.empty())));
             }
+            checkSize(next);
         } catch (Exception e) {
             logger.warn("Pack de ressources : manifeste injoignable ({}), on garde le pack actuel", e.getMessage());
         }
+    }
+
+    /** Taille du pack (en-tête Content-Length) : au-delà de 50 Mo, un avertissement (long à télécharger pour les joueurs). */
+    private void checkSize(Pack pack) {
+        try {
+            HttpRequest head = HttpRequest.newBuilder(URI.create(pack.url())).timeout(Duration.ofSeconds(10))
+                    .method("HEAD", HttpRequest.BodyPublishers.noBody()).build();
+            long size = http.send(head, HttpResponse.BodyHandlers.discarding()).headers().firstValueAsLong("Content-Length").orElse(-1);
+            if (size > sizeWarningBytes) {
+                logger.warn("Pack de ressources : {} Mo, c'est lourd (plus de 50 Mo) : téléchargement long pour les joueurs", size / (1024 * 1024));
+            } else if (size > 0) {
+                logger.info("Pack de ressources : {} Mo", Math.max(1, size / (1024 * 1024)));
+            }
+        } catch (Exception e) {
+            logger.warn("Pack de ressources : taille inconnue ({})", e.getMessage());
+        }
+    }
+
+    /** /pack : recharger le pack du réseau tout de suite (après une mise à jour, ou s'il s'est mal chargé). */
+    public void resend(Player player) {
+        if (current == null || bedrock(player)) {
+            player.sendMessage(messages.get(player, "resource-pack.none", TagResolver.empty()));
+            return;
+        }
+        send(player);
     }
 
     /** Première arrivée sur un serveur du réseau : le pack est proposé (imposé si required). */

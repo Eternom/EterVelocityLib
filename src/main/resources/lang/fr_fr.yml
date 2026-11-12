@@ -20,6 +20,8 @@ orchestrator:
   mode-real: "réel"
   status: "<info>Orchestrateur <accent><family></accent> <accent><mode></accent> (prêt : <ready>) · <minimum> à <maximum> serveurs de <capacity> joueurs · version : <accent><version>"
 resource-pack:
-  prompt: "<primary>Pack du réseau</primary> <info>· textures et objets d'Eternom. Il est nécessaire pour jouer."
+  prompt: "<primary>Pack du réseau</primary> <info>· les modèles des monstres et des PNJ, les objets et les textures d'Eternom : sans lui, le jeu n'affiche pas ce qui t'entoure. Il est nécessaire pour jouer."
+  updated: "<info>Le pack de ressources a été mis à jour. <click:run_command:'/pack'><accent><u>[Le charger maintenant]</u></accent></click> <dark_gray>(sinon, à ta prochaine connexion)"
+  none: "<error>Pas de pack de ressources à charger pour le moment."
   declined: "<error>Le pack de ressources est nécessaire pour jouer sur Eternom.\n<info>Réessaie et accepte-le (Multijoueur > Modifier le serveur > Packs de ressources : Activé)."
   failed: "<error>Le pack de ressources n'a pas pu être chargé.\n<info>Réessaie dans un instant ; si ça continue, préviens le staff."
