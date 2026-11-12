@@ -20,8 +20,8 @@ orchestrator:
   mode-real: "live"
   status: "<info>Orchestrator <accent><family></accent> <accent><mode></accent> (ready: <ready>) · <minimum> to <maximum> servers of <capacity> players · version: <accent><version>"
 resource-pack:
-  prompt: "<primary>Network pack</primary> <info>· Eternom's monster and NPC models, items and textures: without it, the game can't show what's around you. It is required to play."
+  prompt: "<primary>Network pack</primary> <info>· EterCraft's monster and NPC models, items and textures: without it, the game can't show what's around you. It is required to play."
   updated: "<info>The resource pack was updated. <click:run_command:'/pack'><accent><u>[Load it now]</u></accent></click> <dark_gray>(otherwise, next time you join)"
   none: "<error>No resource pack to load right now."
-  declined: "<error>The resource pack is required to play on Eternom.\n<info>Try again and accept it (Multiplayer > Edit server > Resource packs: Enabled)."
+  declined: "<error>The resource pack is required to play on EterCraft.\n<info>Try again and accept it (Multiplayer > Edit server > Resource packs: Enabled)."
   failed: "<error>The resource pack could not be loaded.\n<info>Try again in a moment; if it keeps happening, tell the staff."
